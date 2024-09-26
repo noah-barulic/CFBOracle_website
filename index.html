@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Football AI Predictions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            text-align: center;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        #search-form {
+            margin-top: 2rem;
+        }
+
+        #query {
+            width: 70%;
+            padding: 0.5rem;
+            font-size: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+            button:hover {
+                background-color: #0056b3;
+            }
+
+        #results {
+            margin-top: 2rem;
+            text-align: left;
+        }
+
+        #clarification {
+            margin-top: 2rem;
+            display: none;
+        }
+
+        #visualization {
+            margin-top: 2rem;
+        }
+
+        /* Swirling Dots Animation */
+        .swirling-dots {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 1rem auto;
+        }
+
+        .dot {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #007bff;
+            border-radius: 50%;
+        }
+
+        .connector {
+            position: absolute;
+            width: 2px;
+            height: 50px;
+            background-color: #007bff;
+            transform-origin: bottom center;
+        }
+
+        .swirling-dots .dot:nth-child(1) {
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: swirl 2s linear infinite;
+        }
+
+        .swirling-dots .dot:nth-child(2) {
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            animation: swirl 2s linear infinite;
+            animation-delay: -0.5s;
+        }
+
+        .swirling-dots .dot:nth-child(3) {
+            top: 50%;
+            left: 100%;
+            transform: translate(-100%, -50%);
+            animation: swirl 2s linear infinite;
+            animation-delay: -1s;
+        }
+
+        .swirling-dots .dot:nth-child(4) {
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: swirl 2s linear infinite;
+            animation-delay: -1.5s;
+        }
+
+        .swirling-dots .connector {
+            top: 50%;
+            left: 50%;
+            transform-origin: center bottom;
+            animation: rotate 2s linear infinite;
+        }
+
+        @keyframes swirl {
+            0% {
+                transform: rotate(0deg) translateX(-50%);
+            }
+
+            100% {
+                transform: rotate(360deg) translateX(-50%);
+            }
+        }
+
+        @keyframes rotate {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .footer {
+            margin-top: 2rem;
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .author {
+            position: fixed;
+            bottom: 10px;
+            color: #555;
+            font-size: 0.9rem;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>College Football AI Predictions</h1>
+        <form id="search-form">
+            <input type="text" id="query" placeholder="Ask any question about college football, e.g. 'What are the chances of Alabama beating Georgia?'">
+            <button type="submit">Search</button>
+        </form>
+        <div id="clarification">
+            <p id="clarification-text"></p>
+            <button id="clarify-button">Clarify</button>
+        </div>
+        <div id="results"></div>
+        <div id="visualization">
+            <canvas id="chart"></canvas>
+        </div>
+        <div class="footer">Powered by OpenAI ChatGPT-3.5</div>
+    </div>
+
+    <!-- Author section outside the main container -->
+    <div class="author">Created by Noah Barulic</div>
+
+    <script>
+        document.getElementById('search-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const query = document.getElementById('query').value;
+            const results = document.getElementById('results');
+            const clarificationDiv = document.getElementById('clarification');
+            const clarificationText = document.getElementById('clarification-text');
+
+            // Show AI Brain-like loading animation while waiting for response
+            results.innerHTML = `
+                    <div class="ai-brain">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                `;
+            clarificationDiv.style.display = 'none';  // Hide clarification section initially
+
+            try {
+                const response = await fetch('http://localhost:3000/api/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Check if the backend asks for clarification
+                if (data.clarification) {
+                    clarificationDiv.style.display = 'block';
+                    clarificationText.innerText = data.clarification;
+                    results.innerHTML = '';  // Clear results
+                    return;
+                }
+
+                // Display any error message sent from the server
+                if (data.error) {
+                    results.innerHTML = `<p>Error: ${data.error}</p>`;
+                    return;
+                }
+
+                // Display GPT's response
+                results.innerHTML = `
+                        <h2>AI Response:</h2>
+                        <p>${data.gptResponse}</p>
+                    `;
+
+                // Visualization logic (optional, can add Chart.js rendering here)
+                // Example of chart logic can go here
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                results.innerHTML = 'An error occurred while fetching the data.';
+            }
+        });
+
+        // Optional: Handle clarification logic if needed
+        document.getElementById('clarify-button').addEventListener('click', function () {
+            // Logic for clarification if needed
+            alert('Clarification button clicked');
+        });
+    </script>
+</body>
+</html>
